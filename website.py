@@ -1,14 +1,9 @@
 import streamlit as st
-import os
-import sys
-from PIL import Image
+import hashlib
 import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
 
-
-import setuptools
-from setuptools.command.install import install
 
 st.title("Shortest Path Creator")
 markdown = """This is a small project which made for identifying a shortest path in a visual map. 
@@ -17,51 +12,37 @@ markdown = """This is a small project which made for identifying a shortest path
 
 st.markdown(markdown)
 
-# Define the number of nodes
-nodes = np.array(["v1", "v2", "v3", "v4", "v5","v6","v7","v8","v9"])
-# Define the distance between nodes
-row = np.array(["v1", "v1", "v5", "v3", "v3", "v1", "v7","v7","v2"])
-col = np.array(["v2", "v3", "v3", "v7", "v6", "v7", "v9","v8","v4"])
-value = np.array([10, 5, 2, 3, 1, 9, 2,12,6.8])
-# Generate undirected graph
-G = nx.Graph()
-# Add a node to the graph
-for i in range(0, np.size(nodes)):
-    G.add_node(nodes[i])
-# Add weighted edges
-for i in range(0, np.size(row)):
-    G.add_weighted_edges_from([(row[i], col[i], value[i])])
-# Set network layout
-pos = nx.random_layout(G)
-# Draw a network image
-nx.draw(G, pos, with_labels=True, node_color='white', edge_color='b', node_size=800, alpha=0.5)
-plt.ion() # Turn on interactive mode
-plt.title("slfe_Net")
-plt.ioff()
-plt.savefig("Graph.png", format="PNG")
-plt.show()
-edge_labels = nx.get_edge_attributes(G, 'weight')
-nx.draw_networkx_edge_labels(G, pos, edge_labels)
-#nx.draw_networkx_edge_labels(G, pos, edge_labels)
-image = Image.open('Graph.png')
-st.image(image)
-plt.pause(1)  # Interval seconds: 3s
-plt.close()
+def make_hashes(password):
+	return hashlib.sha256(str.encode(password)).hexdigest()
+
+#password make
+def check_hashes(password,hashed_text):
+	if make_hashes(password) == hashed_text:
+		return hashed_text
+	return False
+
+import sqlite3
+conn = sqlite3.connect('data.db')
+c = conn.cursor()
+
+#DB functions
+def create_usertable():
+    c.execute('CREATE TABLE IF NOT EXISTS usertable(username TEXT, password TEXT)')
+
+def add_userdata(username,password):
+	c.execute('INSERT INTO userstable(username,password) VALUES (?,?)',(username,password))
+	conn.commit()
+
+def login_user(username,password):
+	c.execute('SELECT * FROM userstable WHERE username =? AND password = ?',(username,password))
+	data = c.fetchall()
+	return data
 
 
+def view_all_users():
+	c.execute('SELECT * FROM userstable')
+	data = c.fetchall()
+	return data
 
-'''
-Shortest Path with dijkstra_path
-'''
-
-# dijkstra method to find the shortest path
-start  = st.text_input("Please enter the start and end nodes separated by spaces:")
-end=st.text_input("Please enter the start and end nodes separated by spaces:")
-path = nx.dijkstra_path(G, source=start, target=end)
-st.write('Path from node {} to {}:'.format(start, end), path)
-distance = nx.dijkstra_path_length(G, source=start, target=end)
-st.write('The distance from node {} to {} is: '.format(start, end), distance)
-st.write(f"The distance from {start} to {end} is: ...")
-
-
-
+def main():
+    """Simple Login App"""
